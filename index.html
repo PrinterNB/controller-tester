@@ -107,8 +107,11 @@
     /* (duplicate dpad rules removed - consolidated earlier) */
 
     .center-controls{display:flex;flex-direction:column;gap:8px;align-items:center}
-    .small-btn{width:68px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.02);color:var(--muted);font-size:12px;transition:all 0.06s}
+    .small-btn{width:68px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.06);color:#e6eef8;font-size:12px;transition:background 0.12s,transform 0.08s;border:none;box-shadow:none;appearance:none;-webkit-appearance:none;cursor:pointer}
+    .small-btn:hover{background:rgba(255,255,255,0.08);transform:translateY(-1px)}
     .small-btn.pressed{background:var(--trigger);color:#001}
+    .small-btn:focus{outline:none;box-shadow:none}
+    .small-btn::-moz-focus-inner{border:0}
 
     .joystick.active .knob{box-shadow:0 12px 28px rgba(34,193,255,0.2),0 0 18px rgba(34,193,255,0.06)}
     .knob.pressed{box-shadow:0 8px 18px rgba(0,0,0,0.55),0 0 18px rgba(255,209,102,0.12);border:2px solid rgba(255,209,102,0.18)}
@@ -126,7 +129,8 @@
       </div>
       <div class="controls">
         <label class="muted" for="gamepadSelect">Select controller</label>
-        <select id="gamepadSelect"><option value="-1">No controller</option></select>
+          <select id="gamepadSelect"><option value="-1">No controller</option></select>
+          <button id="scanBtn" class="small-btn" style="margin-left:8px">Scan</button>
       </div>
     </header>
 
@@ -178,9 +182,19 @@
         
       </div>
 
-      <footer id="footer">Waiting for controllers...</footer>
+          <footer id="footer">Waiting for controllers...</footer>
     </div>
   </div>
+
+      <!-- Overlay shown while scanning for input (user gesture required on some browsers) -->
+      <div id="scanOverlay" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:60;">
+        <div style="background:rgba(2,6,12,0.9);color:#fff;padding:18px 22px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,0.6);font-size:16px;display:flex;flex-direction:column;gap:12px;align-items:center;">
+          <div id="scanMsg">Press any button on your controller...</div>
+          <div style="display:flex;gap:8px;">
+            <button id="cancelScan" class="small-btn">Cancel</button>
+          </div>
+        </div>
+      </div>
 
   <script>
     // Simple mapping for common button names
@@ -201,6 +215,7 @@
     const ltFill = document.querySelector('#lt .t-fill');
     const rtFill = document.querySelector('#rt .t-fill');
     const buttonsContainer = document.getElementById('buttons');
+    const scanBtn = document.getElementById('scanBtn');
     const bumperL = document.getElementById('lb');
     const bumperR = document.getElementById('rb');
     // rawInfo removed; no DOM element needed
@@ -212,10 +227,20 @@
     const TRIG_SMOOTH = 0.92; // triggers update quicker (closer to raw)
     function lerp(a,b,t){return a+(b-a)*t}
 
-    function updateGamepadList(){
-      const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+    // Keep a snapshot of connected gamepads to avoid unnecessary rebuilds
+    let _lastGamepadSnapshot = '';
+    function snapshotGamepads(gps){
+      return gps.map(g=>`${g.index}:${g.id}`).join('|');
+    }
+
+    function updateGamepadList(gpsParam){
+      const gps = gpsParam || (navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : []);
+      const snap = snapshotGamepads(gps);
+      // If nothing changed, don't rebuild the select
+      if(snap === _lastGamepadSnapshot) return;
+      _lastGamepadSnapshot = snap;
       const prev = select.value;
-      // clear
+      // clear and populate
       select.innerHTML = '';
       if(!gps.length){
         const opt = document.createElement('option'); opt.value = -1; opt.textContent = 'No controller'; select.appendChild(opt);
@@ -281,6 +306,9 @@
     }
 
     function update(){
+      const gpsForCheck = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+      const snapNow = snapshotGamepads(gpsForCheck);
+      if(snapNow !== _lastGamepadSnapshot) updateGamepadList(gpsForCheck);
       const gp = navigator.getGamepads ? navigator.getGamepads()[selectedIndex] : null;
       if(gp){
         footer.textContent = `Polling ${gp.id}`;
@@ -356,6 +384,17 @@
       requestAnimationFrame(update);
     }
 
+    function logDebug(msg){
+      try{ console.debug('[CV]', msg); footer.textContent = msg; }catch(e){}
+    }
+
+    function dumpGamepads(label){
+      const raw = navigator.getGamepads ? navigator.getGamepads() : [];
+      const arr = Array.from(raw).map((g,i)=> g ? {i, id:g.id, index:g.index, axes:g.axes?.length, buttons:g.buttons?.length} : {i, empty:true});
+      console.debug('[CV] '+label, arr, raw);
+      return {arr, raw};
+    }
+
     
 
     // Events
@@ -368,14 +407,9 @@
       updateGamepadList();
     });
 
-    // Poll for changes to list (some browsers don't fire events reliably). Poll once per second for list updates.
-    setInterval(()=>{
-      const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
-      const has = gps.length>0;
-      if(!has && select.options.length>1) updateGamepadList();
-      // if there is at least one and select is empty, populate
-      if(has && select.options.length<=1) updateGamepadList();
-    }, 1000);
+    // Some browsers don't reliably fire gamepadconnected/gamepaddisconnected.
+    // Detect changes quickly by watching the gamepad list during the animation loop
+    // and only rebuild the dropdown when the list actually changes.
 
     select.addEventListener('change',(e)=>{
       selectedIndex = Number(select.value);
@@ -384,9 +418,50 @@
       if(gp) renderButtons(gp.buttons);
     });
 
+    // Scan button: manual user gesture to surface gamepads in some browsers
+    scanBtn?.addEventListener('click', ()=>{
+      // Show overlay and run a short intensive poll (3s) to detect controllers.
+      const overlay = document.getElementById('scanOverlay');
+      const cancel = document.getElementById('cancelScan');
+      overlay.style.display = 'flex';
+      logDebug('Scanning for controllers... press a button');
+      const start = Date.now();
+      let stopped = false;
+      const id = setInterval(()=>{
+        const raw = navigator.getGamepads ? navigator.getGamepads() : [];
+        const gps = Array.from(raw).filter(Boolean);
+        if(stopped) return;
+        if(gps.length){
+          logDebug('Found ' + gps.length + ' controller(s)');
+          dumpGamepads('Scan hit');
+          updateGamepadList(gps);
+          stopped = true;
+          overlay.style.display = 'none';
+          clearInterval(id);
+          return;
+        }
+        if(Date.now() - start > 3000){
+          logDebug('Scan finished: none found');
+          dumpGamepads('Scan end');
+          stopped = true;
+          overlay.style.display = 'none';
+          clearInterval(id);
+        }
+      }, 100);
+      const onCancel = ()=>{ stopped = true; overlay.style.display = 'none'; clearInterval(id); logDebug('Scan cancelled'); };
+      cancel?.addEventListener('click', onCancel, {once:true});
+    });
+
     // initial population
     updateGamepadList();
     requestAnimationFrame(update);
+
+    // Fallback poll in case requestAnimationFrame doesn't detect changes quickly in some environments
+    const fallbackPoll = setInterval(()=>{
+      const gps = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+      const snap = snapshotGamepads(gps);
+      if(snap !== _lastGamepadSnapshot) updateGamepadList(gps);
+    }, 400);
   </script>
 </body>
 </html>

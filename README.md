@@ -6,22 +6,16 @@ Live demo: https://controller.parkerbrown.photos
 *The controller dropdown takes a minute to populate on the live demo.
 
 ## Requirements
+## Requirements
 - Modern desktop browser with Gamepad API support (Chrome, Edge, Firefox recommended).
-- For some browsers/controller combos the Gamepad API requires a secure context (HTTPS) or `localhost`.
+- For some browsers/controller combos the Gamepad API may require a user gesture (press a controller button) or a secure context (HTTPS) to expose gamepad data.
 
 ## Quick start
-1. Open the project folder and open `index.html` in your browser, or serve the folder and open the local URL.
-
-Serve locally (example):
-
-```bash
-python -m http.server 8000
-# then open http://localhost:8000 in your browser
-```
-
-2. Connect a controller (USB or Bluetooth).
-3. Select the controller from the dropdown at the top of the page.
-4. Move sticks and press buttons to see the live visualization.
+1. Open the project folder and open `index.html` in your browser (double-click the file or use File → Open).
+2. Connect your controller (USB or Bluetooth).
+3. Click the `Scan` button and, when prompted, press any button on the controller to allow the browser to detect it.
+4. The detected controller will appear in the dropdown and be selected automatically; you can also switch controllers using the dropdown.
+5. Move sticks and press buttons to see the live visualization.
 
 ## Controls / Mapping (typical)
 - Face buttons: A=0, B=1, X=2, Y=3
@@ -42,4 +36,4 @@ Note: Some controllers use different mappings; use developer tools (e.g. `chrome
 - Nonstandard controllers may require remapping.
 - Some browsers may not fire `gamepadconnected`/`gamepaddisconnected` reliably; the page polls for gamepads periodically.
 
-If you want a screenshot or I can add a small local-server helper script, tell me which you'd prefer.
+If you want a screenshot or additional convenience features (auto-select on load, persistent controller memory, etc.), tell me which you'd prefer.
