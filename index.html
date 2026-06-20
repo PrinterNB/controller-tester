@@ -134,9 +134,9 @@
     .test-header{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}
     .test-title{font-size:15px;font-weight:700;margin:0}
     .test-help{color:var(--muted);font-size:13px;line-height:1.5}
-    .tester-layout{display:grid;grid-template-columns:1fr 240px;gap:16px;align-items:start}
-    .circle-wrap{position:relative;background:transparent;border:1px solid transparent;border-radius:18px;padding:0;overflow:hidden;min-height:380px}
-    .circle-canvas{width:100%;height:340px;display:block;border-radius:14px;background:transparent}
+    .tester-layout{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+    .circle-wrap{position:relative;background:transparent;border:1px solid transparent;border-radius:18px;padding:12px;overflow:visible;min-height:560px;box-sizing:border-box}
+    .circle-canvas{width:100%;height:520px;display:block;border-radius:14px;background:transparent}
     .chart-meta{display:flex;gap:10px;justify-content:space-between;align-items:stretch;margin-top:12px;flex-wrap:wrap}
     .chart-meta .meta-item{flex:1;min-width:160px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04)}
     .chart-meta .meta-label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px}
@@ -315,7 +315,7 @@
 
                 <div class="step-box">
                   <div class="step-label">What to look for</div>
-                  <div class="muted">A tighter trace means the stick keeps a more even radius while you spin it.</div>
+                  <div class="muted" id="testFocusHint">A tighter trace means the stick keeps a more even radius while you spin it.</div>
                 </div>
               </div>
             </div>
@@ -345,11 +345,18 @@
       visualizer: 'visualizerPanel',
       tests: 'testsPanel'
     };
+    const CIRCULARITY_TEST_ID = 'thumbstick-circularity';
+    const DEADZONE_TEST_ID = 'thumbstick-deadzone';
     const TESTS = [
       {
-        id: 'thumbstick-circularity',
+        id: CIRCULARITY_TEST_ID,
         title: 'Thumbstick circularity tester',
         desc: 'Compare the path of one stick against a perfect circle and spot wobble, flattening, or uneven corners.'
+      },
+      {
+        id: DEADZONE_TEST_ID,
+        title: 'Thumbstick deadzone tester',
+        desc: 'Measure how far the stick can move from center before it starts reporting motion, and watch the inner deadzone boundary live.'
       }
     ];
 
@@ -364,6 +371,7 @@
     const selectedStickPill = document.getElementById('selectedStickPill');
     const testStatePill = document.getElementById('testStatePill');
     const testInstruction = document.getElementById('testInstruction');
+    const testFocusHint = document.getElementById('testFocusHint');
     const circularityScore = document.getElementById('circularityScore');
     const circularitySummary = document.getElementById('circularitySummary');
     const circularityStatusText = document.getElementById('circularityStatusText');
@@ -393,8 +401,15 @@
     let activeTab = 'visualizer';
     let activeTestId = TESTS[0]?.id || null;
     let circularityStick = 'left';
+    let deadzoneStick = 'left';
     const CIRCULARITY_SAMPLE_MS = 8;
+    const DEADZONE_SAMPLE_MS = 8;
+    const DEADZONE_MIN_POINTS = 180;
+    const DEADZONE_MIN_DURATION_MS = 3200;
+    const DEADZONE_MIN_MOVE_MAGNITUDE = 0.7;
     const CIRCULARITY_SMOOTH_WINDOW = 3;
+    const CHART_EDGE_PADDING = 60;
+    const CHART_PLOT_SCALE = 0.92;
     const circularityState = {
       running: false,
       finished: false,
@@ -409,6 +424,18 @@
       completedAt: 0,
       finalScore: null,
       finalSummary: ''
+    };
+    const deadzoneState = {
+      running: false,
+      finished: false,
+      points: [],
+      lastSampleAt: 0,
+      lastPoint: null,
+      startedAt: 0,
+      completedAt: 0,
+      finalScore: null,
+      finalSummary: '',
+      maxMagnitude: 0
     };
 
     const smoothed = { lx:0, ly:0, rx:0, ry:0, lt:0, rt:0 };
@@ -429,7 +456,7 @@
       tabPanels.forEach(panel=>{
         panel.classList.toggle('active', panel.id === TABS[tabName]);
       });
-      if(tabName === 'tests') renderCircularityTest();
+      if(tabName === 'tests') renderActiveTest();
     }
 
     function setActiveTest(testId){
@@ -442,6 +469,54 @@
       if(test){
         activeTestTitle.textContent = test.title;
         activeTestDesc.textContent = test.desc;
+      }
+      updateTestChrome();
+      renderActiveTest();
+    }
+
+    function getActiveTestMode(){
+      return activeTestId === DEADZONE_TEST_ID ? 'deadzone' : 'circularity';
+    }
+
+    function getActiveTestState(){
+      return activeTestId === DEADZONE_TEST_ID ? deadzoneState : circularityState;
+    }
+
+    function getActiveStick(){
+      return activeTestId === DEADZONE_TEST_ID ? deadzoneStick : circularityStick;
+    }
+
+    function getStickLabel(stick){
+      return stick === 'left' ? 'Left stick' : 'Right stick';
+    }
+
+    function getTestInstructionText(mode, stick, running){
+      if(mode === 'deadzone'){
+        return running
+          ? `Slowly sweep the ${stick} stick out from center and back. The chart is measuring how far it travels before the deadzone ends.`
+          : `Press Start, then gently move the ${stick} stick away from center and back. The chart will show the quiet zone around the middle.`;
+      }
+      return running
+        ? `Spin the ${stick} stick in a clean circle. The trace updates live and will stop automatically once it has a good dataset.`
+        : `Press Start, then move the ${stick} stick in a full circle as evenly as you can. Your live path will draw on the chart beside a perfect reference circle.`;
+    }
+
+    function getTestFocusText(mode){
+      return mode === 'deadzone'
+        ? 'Watch the inner ring and how tightly the trace clusters around center before the stick starts responding.'
+        : 'A tighter trace means the stick keeps a more even radius while you spin it.';
+    }
+
+    function updateTestChrome(){
+      const mode = getActiveTestMode();
+      const stick = getActiveStick();
+      const state = getActiveTestState();
+      leftStickBtn?.classList.toggle('pressed', stick === 'left');
+      rightStickBtn?.classList.toggle('pressed', stick === 'right');
+      selectedStickPill.textContent = getStickLabel(stick);
+      if(testFocusHint) testFocusHint.textContent = getTestFocusText(mode);
+      if(!state.running){
+        testInstruction.textContent = getTestInstructionText(mode, stick, false);
       }
     }
 
@@ -460,16 +535,13 @@
     }
 
     function setCircularityStick(stick){
-      circularityStick = stick;
-      leftStickBtn?.classList.toggle('pressed', stick === 'left');
-      rightStickBtn?.classList.toggle('pressed', stick === 'right');
-      selectedStickPill.textContent = stick === 'left' ? 'Left stick' : 'Right stick';
-      if(!circularityState.running){
-        testInstruction.textContent = `Press Start, then move the ${circularityStick} stick in a full circle as evenly as you can. Your live path will draw on the chart beside a perfect reference circle.`;
-      }
+      if(activeTestId === DEADZONE_TEST_ID) deadzoneStick = stick;
+      else circularityStick = stick;
+      updateTestChrome();
+      renderActiveTest();
     }
 
-    function resetCircularity(){
+    function resetCircularityMode(){
       circularityState.running = false;
       circularityState.finished = false;
       circularityState.points = [];
@@ -483,19 +555,41 @@
       circularityState.completedAt = 0;
       circularityState.finalScore = null;
       circularityState.finalSummary = '';
-      testStatePill.textContent = 'Ready';
       circularityScore.textContent = '--';
       circularitySummary.textContent = 'Waiting to begin.';
       circularityStatusText.textContent = 'Ready';
       circularitySampleText.textContent = '0';
-      testInstruction.textContent = 'Press Start, then move the chosen stick in a full circle as evenly as you can. The test will stop automatically once it has a clean enough trace.';
       circularityStartBtn.textContent = 'Start';
       circularityStartBtn.classList.remove('pressed');
-      setCircularityStick(circularityStick);
-      renderCircularityTest();
     }
 
-    function startCircularity(){
+    function resetDeadzoneMode(){
+      deadzoneState.running = false;
+      deadzoneState.finished = false;
+      deadzoneState.points = [];
+      deadzoneState.lastSampleAt = 0;
+      deadzoneState.lastPoint = null;
+      deadzoneState.startedAt = 0;
+      deadzoneState.completedAt = 0;
+      deadzoneState.finalScore = null;
+      deadzoneState.finalSummary = '';
+      deadzoneState.maxMagnitude = 0;
+      circularityScore.textContent = '--';
+      circularitySummary.textContent = 'Waiting to begin.';
+      circularityStatusText.textContent = 'Ready';
+      circularitySampleText.textContent = '0';
+      circularityStartBtn.textContent = 'Start';
+      circularityStartBtn.classList.remove('pressed');
+    }
+
+    function resetCircularity(){
+      if(activeTestId === DEADZONE_TEST_ID) resetDeadzoneMode();
+      else resetCircularityMode();
+      updateTestChrome();
+      renderActiveTest();
+    }
+
+    function startCircularityMode(){
       circularityState.running = true;
       circularityState.finished = false;
       circularityState.points = [];
@@ -509,20 +603,46 @@
       circularityState.completedAt = 0;
       circularityState.finalScore = null;
       circularityState.finalSummary = '';
-      testStatePill.textContent = 'Recording';
       circularityScore.textContent = '--';
       circularitySummary.textContent = 'Spin the chosen stick in a circle now.';
       circularityStatusText.textContent = 'Recording';
       circularitySampleText.textContent = '0';
-      testInstruction.textContent = `Spin the ${circularityStick} stick in a clean circle. The trace updates live and will stop automatically once it has a good dataset.`;
+      testInstruction.textContent = getTestInstructionText('circularity', circularityStick, true);
       circularityStartBtn.textContent = 'Running';
       circularityStartBtn.classList.add('pressed');
     }
 
-    function getCircularityStickAxes(gp){
+    function startDeadzoneMode(){
+      deadzoneState.running = true;
+      deadzoneState.finished = false;
+      deadzoneState.points = [];
+      deadzoneState.lastSampleAt = 0;
+      deadzoneState.lastPoint = null;
+      deadzoneState.startedAt = performance.now();
+      deadzoneState.completedAt = 0;
+      deadzoneState.finalScore = null;
+      deadzoneState.finalSummary = '';
+      deadzoneState.maxMagnitude = 0;
+      circularityScore.textContent = '--';
+      circularitySummary.textContent = 'Gently move the stick out from center now.';
+      circularityStatusText.textContent = 'Sampling';
+      circularitySampleText.textContent = '0';
+      testInstruction.textContent = getTestInstructionText('deadzone', deadzoneStick, true);
+      circularityStartBtn.textContent = 'Running';
+      circularityStartBtn.classList.add('pressed');
+    }
+
+    function startCircularity(){
+      if(activeTestId === DEADZONE_TEST_ID) startDeadzoneMode();
+      else startCircularityMode();
+      updateTestChrome();
+      renderActiveTest();
+    }
+
+    function getStickAxes(gp, stick){
       if(!gp) return { x: 0, y: 0, active: false };
       const axes = gp.axes || [];
-      const isLeft = circularityStick === 'left';
+      const isLeft = stick === 'left';
       const x = axes[isLeft ? 0 : 2] ?? 0;
       const y = axes[isLeft ? 1 : 3] ?? 0;
       const magnitude = Math.hypot(x, y);
@@ -537,6 +657,16 @@
       return { score, avgError };
     }
 
+    function computeDeadzoneScore(points){
+      if(points.length < 4) return null;
+      const magnitudes = points.map(p => Math.hypot(p.x, p.y)).filter(Number.isFinite).sort((a, b) => a - b);
+      if(!magnitudes.length) return null;
+      const lowerCount = Math.max(1, Math.ceil(magnitudes.length * 0.2));
+      const radius = magnitudes.slice(0, lowerCount).reduce((sum, value) => sum + value, 0) / lowerCount;
+      const maxMagnitude = magnitudes[magnitudes.length - 1];
+      return { radius: clamp(radius, 0, 1), maxMagnitude };
+    }
+
     function sampleCircularityPoint(rawX, rawY){
       const point = { x: clamp(rawX, -1, 1), y: clamp(rawY, -1, 1) };
       const magnitude = Math.hypot(point.x, point.y);
@@ -544,6 +674,12 @@
       const binCount = 24;
       const bin = Math.floor((((angle + Math.PI) / (Math.PI * 2)) * binCount) % binCount);
       return { point, magnitude, bin, angle };
+    }
+
+    function sampleDeadzonePoint(rawX, rawY){
+      const point = { x: clamp(rawX, -1, 1), y: clamp(rawY, -1, 1) };
+      const magnitude = Math.hypot(point.x, point.y);
+      return { point, magnitude };
     }
 
     function getSmoothedCircularityPoints(points){
@@ -603,6 +739,26 @@
       drawCircularityPath(circularityState.points, false, scoreData);
     }
 
+    function finishDeadzone(reason){
+      const scoreData = computeDeadzoneScore(deadzoneState.points);
+      deadzoneState.running = false;
+      deadzoneState.finished = true;
+      deadzoneState.completedAt = performance.now();
+      deadzoneState.finalScore = scoreData?.radius ?? null;
+      deadzoneState.finalSummary = scoreData
+        ? `Estimated deadzone radius: ${(scoreData.radius * 100).toFixed(1)}% of stick travel.`
+        : 'Not enough samples to estimate the deadzone.';
+      circularityScore.textContent = scoreData ? `${(scoreData.radius * 100).toFixed(1)}%` : '--';
+      circularitySummary.textContent = deadzoneState.finalSummary;
+      circularityStatusText.textContent = reason || 'Complete';
+      circularitySampleText.textContent = String(deadzoneState.points.length);
+      testStatePill.textContent = reason || 'Complete';
+      circularityStartBtn.textContent = 'Start again';
+      circularityStartBtn.classList.remove('pressed');
+      testInstruction.textContent = 'Result locked. Start again to run another trace.';
+      drawDeadzonePath(deadzoneState.points, false, scoreData);
+    }
+
     function resizeCircularityCanvas(){
       if(!circularityCanvas || !circularityCtx) return;
       const dpr = window.devicePixelRatio || 1;
@@ -624,7 +780,7 @@
       const h = circularityCanvas.clientHeight || 1;
       const cx = w / 2;
       const cy = h / 2;
-      const radius = Math.min(w, h) * 0.45;
+      const radius = Math.max(20, ((Math.min(w, h) / 2) - CHART_EDGE_PADDING) * CHART_PLOT_SCALE);
 
       ctx.clearRect(0, 0, w, h);
 
@@ -673,31 +829,187 @@
       ctx.restore();
     }
 
-    function renderCircularityTest(){
+    function drawDeadzonePath(points, isRunning, scoreData){
+      if(!circularityCanvas || !circularityCtx) return;
+      resizeCircularityCanvas();
+      const ctx = circularityCtx;
+      const w = circularityCanvas.clientWidth || 1;
+      const h = circularityCanvas.clientHeight || 1;
+      const cx = w / 2;
+      const cy = h / 2;
+      const outerRadius = Math.max(20, ((Math.min(w, h) / 2) - CHART_EDGE_PADDING) * CHART_PLOT_SCALE);
+      const deadzoneRadius = scoreData ? Math.max(outerRadius * 0.04, outerRadius * scoreData.radius) : outerRadius * 0.12;
+
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,184,107,0.48)';
+      ctx.fillStyle = 'rgba(255,184,107,0.08)';
+      ctx.shadowColor = 'rgba(255,184,107,0.18)';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([8, 8]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, deadzoneRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(125,211,252,0.28)';
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx - outerRadius - 20, cy);
+      ctx.lineTo(cx + outerRadius + 20, cy);
+      ctx.moveTo(cx, cy - outerRadius - 20);
+      ctx.lineTo(cx, cy + outerRadius + 20);
+      ctx.stroke();
+
+      if(points.length){
+        ctx.save();
+        ctx.strokeStyle = 'rgba(125,211,252,0.56)';
+        ctx.lineWidth = 1.2;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        points.forEach((p, index)=>{
+          const px = cx + p.x * outerRadius;
+          const py = cy + p.y * outerRadius;
+          if(index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(125,211,252,0.84)';
+        points.forEach((p, index)=>{
+          if(index % 2 !== 0) return;
+          const px = cx + p.x * outerRadius;
+          const py = cy + p.y * outerRadius;
+          ctx.beginPath();
+          ctx.arc(px, py, 2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function updateCircularityKeyLegend(mode){
+      const keyItems = Array.from(document.querySelectorAll('.deviation-key .key-item'));
+      if(keyItems.length < 4) return;
+      const labels = mode === 'deadzone'
+        ? [
+            ['Very small', '0-5%'],
+            ['Small', '5-10%'],
+            ['Moderate', '10-15%'],
+            ['Large', '15%+']
+          ]
+        : [
+            ['Very low', '0-5%'],
+            ['Low', '5-10%'],
+            ['Moderate', '10-15%'],
+            ['High', '15%+']
+          ];
+      keyItems.forEach((item, index)=>{
+        const labelEl = item.querySelector('.key-label');
+        const valueEl = item.querySelector('.key-value');
+        if(labelEl) labelEl.textContent = labels[index][0];
+        if(valueEl) valueEl.textContent = labels[index][1];
+      });
+    }
+
+    function renderActiveTest(){
       const test = TESTS.find(t => t.id === activeTestId);
-      if(!test || activeTestId !== 'thumbstick-circularity'){
+      if(!test){
         return;
       }
-      const scoreData = computeCircularityScore(circularityState.points);
-      const renderPoints = getSmoothedCircularityPoints(circularityState.points);
+      const mode = getActiveTestMode();
+      const state = getActiveTestState();
+      const scoreData = mode === 'deadzone' ? computeDeadzoneScore(state.points) : computeCircularityScore(state.points);
+      const renderPoints = getSmoothedCircularityPoints(state.points);
+      circularityCanvas?.setAttribute('aria-label', mode === 'deadzone' ? 'Thumbstick deadzone chart' : 'Thumbstick circularity chart');
+      updateCircularityKeyLegend(mode);
+      if(mode === 'circularity'){
+        if(scoreData){
+          if(state.running){
+            circularityScore.textContent = `${scoreData.score}`;
+            circularitySummary.textContent = `Average deviation from the ideal ring: ${(scoreData.avgError * 100).toFixed(1)}% of radius.`;
+            testStatePill.textContent = `${state.lapCount}/8 laps`;
+            circularityStatusText.textContent = 'Recording';
+            circularitySampleText.textContent = String(state.points.length);
+          } else if(state.finished){
+            circularityScore.textContent = `${scoreData.score}`;
+            circularitySummary.textContent = state.finalSummary || `Final average deviation: ${(scoreData.avgError * 100).toFixed(1)}% of radius.`;
+            circularityStatusText.textContent = state.finalScore != null ? 'Done' : 'Ready';
+            circularitySampleText.textContent = String(state.points.length);
+          }
+        } else {
+          circularityStatusText.textContent = state.running ? 'Recording' : (state.finished ? 'Done' : 'Ready');
+          circularitySampleText.textContent = String(state.points.length);
+        }
+        if(state.running){
+          circularityStartBtn.textContent = 'Running';
+          circularityStartBtn.classList.add('pressed');
+          testInstruction.textContent = getTestInstructionText('circularity', circularityStick, true);
+        } else if(state.finished){
+          circularityStartBtn.textContent = 'Start again';
+          circularityStartBtn.classList.remove('pressed');
+          testInstruction.textContent = 'Result locked. Start again to run another trace.';
+        } else {
+          circularityStartBtn.textContent = 'Start';
+          circularityStartBtn.classList.remove('pressed');
+          testInstruction.textContent = getTestInstructionText('circularity', circularityStick, false);
+        }
+        drawCircularityPath(renderPoints, state.running, scoreData);
+        return;
+      }
       if(scoreData){
-        if(circularityState.running){
-          circularityScore.textContent = `${scoreData.score}`;
-          circularitySummary.textContent = `Average deviation from the ideal ring: ${(scoreData.avgError * 100).toFixed(1)}% of radius.`;
-          testStatePill.textContent = `${circularityState.lapCount}/8 laps`;
-          circularityStatusText.textContent = 'Recording';
-          circularitySampleText.textContent = String(circularityState.points.length);
-        } else if(circularityState.finished){
-          circularityScore.textContent = `${scoreData.score}`;
-          circularitySummary.textContent = circularityState.finalSummary || `Final average deviation: ${(scoreData.avgError * 100).toFixed(1)}% of radius.`;
-          circularityStatusText.textContent = circularityState.finalScore != null ? 'Done' : 'Ready';
-          circularitySampleText.textContent = String(circularityState.points.length);
+        if(state.running){
+          circularityScore.textContent = `${(scoreData.radius * 100).toFixed(1)}%`;
+          circularitySummary.textContent = `Estimated deadzone radius: ${(scoreData.radius * 100).toFixed(1)}% of stick travel.`;
+          testStatePill.textContent = `${state.points.length} samples`;
+          circularityStatusText.textContent = 'Sampling';
+          circularitySampleText.textContent = String(state.points.length);
+        } else if(state.finished){
+          circularityScore.textContent = `${(scoreData.radius * 100).toFixed(1)}%`;
+          circularitySummary.textContent = state.finalSummary || `Estimated deadzone radius: ${(scoreData.radius * 100).toFixed(1)}% of stick travel.`;
+          circularityStatusText.textContent = state.finalScore != null ? 'Done' : 'Ready';
+          circularitySampleText.textContent = String(state.points.length);
         }
       } else {
-        circularityStatusText.textContent = circularityState.running ? 'Recording' : (circularityState.finished ? 'Done' : 'Ready');
-        circularitySampleText.textContent = String(circularityState.points.length);
+        circularityStatusText.textContent = state.running ? 'Sampling' : (state.finished ? 'Done' : 'Ready');
+        circularitySampleText.textContent = String(state.points.length);
       }
-      drawCircularityPath(renderPoints, circularityState.running, scoreData);
+      if(state.running){
+        circularityStartBtn.textContent = 'Running';
+        circularityStartBtn.classList.add('pressed');
+        testInstruction.textContent = getTestInstructionText('deadzone', deadzoneStick, true);
+      } else if(state.finished){
+        circularityStartBtn.textContent = 'Start again';
+        circularityStartBtn.classList.remove('pressed');
+        testInstruction.textContent = 'Result locked. Start again to run another trace.';
+      } else {
+        circularityStartBtn.textContent = 'Start';
+        circularityStartBtn.classList.remove('pressed');
+        testInstruction.textContent = getTestInstructionText('deadzone', deadzoneStick, false);
+      }
+      drawDeadzonePath(renderPoints, state.running, scoreData);
     }
 
     // Keep a snapshot of connected gamepads to avoid unnecessary rebuilds
@@ -856,12 +1168,14 @@
       }
 
       if(activeTab === 'tests'){
-        const targetStick = getCircularityStickAxes(gp);
+        const mode = getActiveTestMode();
         const rawAxes = gp?.axes || [];
-        const rawX = circularityStick === 'left' ? (rawAxes[0] ?? 0) : (rawAxes[2] ?? 0);
-        const rawY = circularityStick === 'left' ? (rawAxes[1] ?? 0) : (rawAxes[3] ?? 0);
+        const stick = mode === 'deadzone' ? deadzoneStick : circularityStick;
+        const targetStick = getStickAxes(gp, stick);
+        const rawX = stick === 'left' ? (rawAxes[0] ?? 0) : (rawAxes[2] ?? 0);
+        const rawY = stick === 'left' ? (rawAxes[1] ?? 0) : (rawAxes[3] ?? 0);
         const stickActive = targetStick.active;
-        if(circularityState.running && gp){
+        if(mode === 'circularity' && circularityState.running && gp){
           const now = performance.now();
           const shouldSample = now - circularityState.lastSampleAt > CIRCULARITY_SAMPLE_MS;
           const sampled = sampleCircularityPoint(rawX, rawY);
@@ -896,8 +1210,39 @@
           if(lapReady && coverageReady && enoughPoints && scoreReady && minDurationReady){
             finishCircularity('Complete');
           }
+        } else if(mode === 'deadzone' && deadzoneState.running && gp){
+          const now = performance.now();
+          const shouldSample = now - deadzoneState.lastSampleAt > DEADZONE_SAMPLE_MS;
+          const sampled = sampleDeadzonePoint(rawX, rawY);
+          if(shouldSample && stickActive){
+            if(!deadzoneState.lastPoint || dist(sampled.point, deadzoneState.lastPoint) > 0.004){
+              deadzoneState.points.push(sampled.point);
+              deadzoneState.maxMagnitude = Math.max(deadzoneState.maxMagnitude, sampled.magnitude);
+              deadzoneState.lastPoint = sampled.point;
+              deadzoneState.lastSampleAt = now;
+            }
+          }
+          const scoreData = computeDeadzoneScore(deadzoneState.points);
+          if(scoreData){
+            circularityScore.textContent = `${(scoreData.radius * 100).toFixed(1)}%`;
+            circularitySummary.textContent = `Estimated deadzone radius: ${(scoreData.radius * 100).toFixed(1)}% of stick travel.`;
+            testStatePill.textContent = `${deadzoneState.points.length} samples`;
+            circularityStatusText.textContent = 'Sampling';
+            circularitySampleText.textContent = String(deadzoneState.points.length);
+          }
+          testInstruction.textContent = stickActive
+            ? `Keep the ${stick} stick moving gently through the center so the deadzone boundary becomes visible.`
+            : `Move the ${stick} stick away from center and back to map the deadzone.`;
+
+          const elapsed = now - deadzoneState.startedAt;
+          const enoughPoints = deadzoneState.points.length >= DEADZONE_MIN_POINTS;
+          const minDurationReady = elapsed >= DEADZONE_MIN_DURATION_MS;
+          const moveEnough = deadzoneState.maxMagnitude >= DEADZONE_MIN_MOVE_MAGNITUDE;
+          if(enoughPoints && minDurationReady && moveEnough){
+            finishDeadzone('Complete');
+          }
         }
-        renderCircularityTest();
+        renderActiveTest();
       }
       requestAnimationFrame(update);
     }
@@ -931,7 +1276,7 @@
     rightStickBtn?.addEventListener('click', ()=> setCircularityStick('right'));
     circularityStartBtn?.addEventListener('click', ()=> startCircularity());
     circularityResetBtn?.addEventListener('click', ()=> resetCircularity());
-    window.addEventListener('resize', ()=> renderCircularityTest());
+    window.addEventListener('resize', ()=> renderActiveTest());
 
     window.addEventListener('gamepadconnected', (e)=>{
       footer.textContent = `Gamepad connected: ${e.gamepad.id}`;

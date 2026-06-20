@@ -1,6 +1,6 @@
 # Controller Tester
 
-A single-file HTML tester that shows axes, triggers, bumpers, sticks and buttons for connected controllers using the browser Gamepad API.
+A single-file HTML tester that shows axes, triggers, bumpers, sticks and buttons for connected controllers using the browser Gamepad API, plus thumbstick circularity and deadzone tests.
 
 Live demo: https://controller.parkerbrown.photos
 
