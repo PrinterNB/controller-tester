@@ -8,6 +8,8 @@
     :root{
       --bg:#0f1720; --card:#0b1220; --muted:#94a3b8; --accent-x:#22c1ff; --accent-y:#7cff88; --trigger:#ffb86b; --btn:#203040; --btn-on:#ffd166;
       --glass: rgba(255,255,255,0.02);
+      --accent:#7dd3fc;
+      --accent-2:#a78bfa;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     }
     html,body{height:100%;margin:0;background:linear-gradient(180deg,#071021 0%, #071827 100%);color:#e6eef8}
@@ -18,6 +20,12 @@
     .controls{display:flex;gap:12px;align-items:center}
     select{background:var(--card);border:1px solid rgba(255,255,255,0.04);color:var(--muted);padding:8px 10px;border-radius:8px}
     .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);padding:16px;border-radius:12px;margin-top:16px}
+    .topbar{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+    .tab-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.04);color:#d7e4f4;padding:9px 14px;border-radius:999px;font-size:13px;cursor:pointer;transition:all 0.15s ease}
+    .tab-btn:hover{background:rgba(255,255,255,0.07);transform:translateY(-1px)}
+    .tab-btn.active{background:linear-gradient(135deg,rgba(125,211,252,0.24),rgba(167,139,250,0.24));border-color:rgba(125,211,252,0.35);color:#fff;box-shadow:0 10px 26px rgba(0,0,0,0.25)}
+    .tab-panel{display:none}
+    .tab-panel.active{display:block}
 
     .grid{display:grid;grid-template-columns:1fr 320px;gap:18px}
 
@@ -112,12 +120,44 @@
     .small-btn.pressed{background:var(--trigger);color:#001}
     .small-btn:focus{outline:none;box-shadow:none}
     .small-btn::-moz-focus-inner{border:0}
+    .primary-btn{min-width:110px;height:38px;border-radius:10px;padding:0 14px;background:linear-gradient(135deg,rgba(125,211,252,0.2),rgba(167,139,250,0.2));border:1px solid rgba(125,211,252,0.22);color:#f8fbff}
+    .primary-btn.pressed,.primary-btn:active{background:linear-gradient(135deg,rgba(255,184,107,0.9),rgba(255,209,102,0.92));color:#001}
+    .secondary-btn{min-width:90px;height:38px;border-radius:10px;padding:0 14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.05)}
+
+    .test-shell{display:grid;grid-template-columns:320px 1fr;gap:18px;align-items:start}
+    .test-list{display:flex;flex-direction:column;gap:10px}
+    .test-item{padding:14px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04)}
+    .test-item .title{font-size:14px;font-weight:700;margin:0 0 4px 0;color:#fff}
+    .test-item .desc{font-size:13px;color:var(--muted);line-height:1.45;margin:0}
+    .test-item.active{border-color:rgba(125,211,252,0.3);background:linear-gradient(180deg,rgba(125,211,252,0.08),rgba(255,255,255,0.03))}
+    .test-stage{display:flex;flex-direction:column;gap:14px}
+    .test-header{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}
+    .test-title{font-size:15px;font-weight:700;margin:0}
+    .test-help{color:var(--muted);font-size:13px;line-height:1.5}
+    .tester-layout{display:grid;grid-template-columns:1fr 240px;gap:16px;align-items:start}
+    .circle-wrap{position:relative;background:transparent;border:1px solid transparent;border-radius:18px;padding:0;overflow:hidden;min-height:380px}
+    .circle-canvas{width:100%;height:340px;display:block;border-radius:14px;background:transparent}
+    .chart-meta{display:flex;gap:10px;justify-content:space-between;align-items:stretch;margin-top:12px;flex-wrap:wrap}
+    .chart-meta .meta-item{flex:1;min-width:160px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04)}
+    .chart-meta .meta-label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:4px}
+    .chart-meta .meta-value{font-size:14px;color:#f3f7ff;font-weight:600}
+    .test-instructions{display:flex;flex-direction:column;gap:12px}
+    .step-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.04);padding:14px;border-radius:12px}
+    .step-label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+    .step-value{font-size:15px;line-height:1.45;margin:0;color:#f3f7ff}
+    .metric{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.03)}
+    .metric span{color:var(--muted);font-size:13px}
+    .metric strong{font-size:14px}
+    .score{font-size:28px;font-weight:800;letter-spacing:-0.04em}
+    .hint-row{display:flex;gap:8px;flex-wrap:wrap}
+    .pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.06);color:#d7e4f4;font-size:12px}
+    .pill.active{background:rgba(125,211,252,0.18);color:#fff}
 
     .joystick.active .knob{box-shadow:0 12px 28px rgba(34,193,255,0.2),0 0 18px rgba(34,193,255,0.06)}
     .knob.pressed{box-shadow:0 8px 18px rgba(0,0,0,0.55),0 0 18px rgba(255,209,102,0.12);border:2px solid rgba(255,209,102,0.18)}
 
     footer{margin-top:12px;color:var(--muted);font-size:13px}
-    @media (max-width:850px){.grid{grid-template-columns:1fr;}.buttons{grid-template-columns:repeat(5,48px)}}
+    @media (max-width:850px){.grid{grid-template-columns:1fr;}.buttons{grid-template-columns:repeat(5,48px)}.test-shell,.tester-layout{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -134,8 +174,14 @@
       </div>
     </header>
 
+    <div class="topbar" role="tablist" aria-label="Controller pages">
+      <button class="tab-btn active" id="tabVisualizer" data-tab="visualizer" role="tab" aria-selected="true">Visualiser</button>
+      <button class="tab-btn" id="tabTests" data-tab="tests" role="tab" aria-selected="false">Tests</button>
+    </div>
+
     <div class="card">
-      <div class="grid">
+      <div class="tab-panel active" id="visualizerPanel" role="tabpanel" aria-labelledby="tabVisualizer">
+        <div class="grid">
         <div class="vis">
           <div class="muted" id="selectedName">No controller selected</div>
           <div class="controller" role="region" aria-label="Controller Tester visualization">
@@ -180,9 +226,80 @@
         </div>
 
         
+        </div>
+          <footer id="footer">Waiting for controllers...</footer>
       </div>
 
-          <footer id="footer">Waiting for controllers...</footer>
+      <div class="tab-panel" id="testsPanel" role="tabpanel" aria-labelledby="tabTests">
+        <div class="test-shell">
+          <aside class="test-list" id="testList" aria-label="Available tests"></aside>
+
+          <section class="test-stage">
+            <div class="test-header">
+              <div>
+                <h2 class="test-title" id="activeTestTitle">Thumbstick circularity tester</h2>
+                <div class="test-help" id="activeTestDesc">Trace the chosen stick around the target circle and compare your path to a perfect circle.</div>
+              </div>
+              <div class="hint-row">
+                <span class="pill active" id="selectedStickPill">Left stick</span>
+                <span class="pill" id="testStatePill">Ready</span>
+              </div>
+            </div>
+
+            <div class="tester-layout">
+              <div class="circle-wrap">
+                <canvas id="circularityCanvas" class="circle-canvas" width="900" height="640" aria-label="Thumbstick circularity chart"></canvas>
+                <div class="chart-meta" aria-label="Circularity status">
+                  <div class="meta-item">
+                    <div class="meta-label">Status</div>
+                    <div class="meta-value" id="circularityStatusText">Ready</div>
+                  </div>
+                  <div class="meta-item">
+                    <div class="meta-label">Samples</div>
+                    <div class="meta-value" id="circularitySampleText">0</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="test-instructions">
+                <div class="step-box">
+                  <div class="step-label">Choose stick</div>
+                  <div class="hint-row">
+                    <button class="small-btn primary-btn pressed" id="leftStickBtn" data-stick="left">Left stick</button>
+                    <button class="small-btn primary-btn" id="rightStickBtn" data-stick="right">Right stick</button>
+                  </div>
+                </div>
+
+                <div class="step-box">
+                  <div class="step-label">Instructions</div>
+                  <p class="step-value" id="testInstruction">
+                    Press Start, then move the chosen stick in a full circle as evenly as you can. Your live path will draw on the chart beside a perfect reference circle.
+                  </p>
+                </div>
+
+                <div class="step-box">
+                  <div class="step-label">Controls</div>
+                  <div class="hint-row">
+                    <button class="small-btn primary-btn" id="circularityStartBtn">Start</button>
+                    <button class="small-btn secondary-btn" id="circularityResetBtn">Reset</button>
+                  </div>
+                </div>
+
+                <div class="step-box">
+                  <div class="step-label">Live result</div>
+                  <div class="score" id="circularityScore">--</div>
+                  <div class="muted" id="circularitySummary">Waiting to begin.</div>
+                </div>
+
+                <div class="step-box">
+                  <div class="step-label">What to look for</div>
+                  <div class="muted">A tighter trace means the stick keeps a more even radius while you spin it.</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -202,9 +319,39 @@
       'A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'Back', 'Start', 'LS', 'RS', 'DUp', 'DDown', 'DLeft', 'DRight', 'Home'
     ];
 
+    const TABS = {
+      visualizer: 'visualizerPanel',
+      tests: 'testsPanel'
+    };
+    const TESTS = [
+      {
+        id: 'thumbstick-circularity',
+        title: 'Thumbstick circularity tester',
+        desc: 'Compare the path of one stick against a perfect circle and spot wobble, flattening, or uneven corners.'
+      }
+    ];
+
     const select = document.getElementById('gamepadSelect');
     const selectedName = document.getElementById('selectedName');
     const footer = document.getElementById('footer');
+    const tabButtons = Array.from(document.querySelectorAll('.tab-btn[data-tab]'));
+    const tabPanels = Array.from(document.querySelectorAll('.tab-panel'));
+    const testList = document.getElementById('testList');
+    const activeTestTitle = document.getElementById('activeTestTitle');
+    const activeTestDesc = document.getElementById('activeTestDesc');
+    const selectedStickPill = document.getElementById('selectedStickPill');
+    const testStatePill = document.getElementById('testStatePill');
+    const testInstruction = document.getElementById('testInstruction');
+    const circularityScore = document.getElementById('circularityScore');
+    const circularitySummary = document.getElementById('circularitySummary');
+    const circularityStatusText = document.getElementById('circularityStatusText');
+    const circularitySampleText = document.getElementById('circularitySampleText');
+    const circularityCanvas = document.getElementById('circularityCanvas');
+    const circularityCtx = circularityCanvas?.getContext('2d');
+    const circularityStartBtn = document.getElementById('circularityStartBtn');
+    const circularityResetBtn = document.getElementById('circularityResetBtn');
+    const leftStickBtn = document.getElementById('leftStickBtn');
+    const rightStickBtn = document.getElementById('rightStickBtn');
 
     const leftKnob = document.getElementById('leftKnob');
     const rightKnob = document.getElementById('rightKnob');
@@ -221,11 +368,315 @@
     // rawInfo removed; no DOM element needed
 
     let selectedIndex = -1;
+    let activeTab = 'visualizer';
+    let activeTestId = TESTS[0]?.id || null;
+    let circularityStick = 'left';
+    const CIRCULARITY_SAMPLE_MS = 8;
+    const CIRCULARITY_SMOOTH_WINDOW = 3;
+    const circularityState = {
+      running: false,
+      finished: false,
+      points: [],
+      coverageBins: new Set(),
+      lapCount: 0,
+      lastSampleAt: 0,
+      lastPoint: null,
+      lastAngle: null,
+      angleTurns: 0,
+      startedAt: 0,
+      completedAt: 0,
+      finalScore: null,
+      finalSummary: ''
+    };
 
     const smoothed = { lx:0, ly:0, rx:0, ry:0, lt:0, rt:0 };
     const SMOOTH = 0.6; // higher => less smoothing (closer to raw input)
     const TRIG_SMOOTH = 0.92; // triggers update quicker (closer to raw)
     function lerp(a,b,t){return a+(b-a)*t}
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+    function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+    function clampIndex(value, min, max){ return Math.max(min, Math.min(max, value)); }
+
+    function setActiveTab(tabName){
+      activeTab = tabName;
+      tabButtons.forEach(btn=>{
+        const active = btn.dataset.tab === tabName;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', String(active));
+      });
+      tabPanels.forEach(panel=>{
+        panel.classList.toggle('active', panel.id === TABS[tabName]);
+      });
+      if(tabName === 'tests') renderCircularityTest();
+    }
+
+    function setActiveTest(testId){
+      activeTestId = testId;
+      TESTS.forEach(test=>{
+        const el = testList?.querySelector(`[data-test-id="${test.id}"]`);
+        el?.classList.toggle('active', test.id === testId);
+      });
+      const test = TESTS.find(t => t.id === testId);
+      if(test){
+        activeTestTitle.textContent = test.title;
+        activeTestDesc.textContent = test.desc;
+      }
+    }
+
+    function renderTestList(){
+      if(!testList) return;
+      testList.innerHTML = '';
+      TESTS.forEach(test=>{
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'test-item' + (test.id === activeTestId ? ' active' : '');
+        item.dataset.testId = test.id;
+        item.innerHTML = `<div class="title">${test.title}</div><p class="desc">${test.desc}</p>`;
+        item.addEventListener('click', ()=> setActiveTest(test.id));
+        testList.appendChild(item);
+      });
+    }
+
+    function setCircularityStick(stick){
+      circularityStick = stick;
+      leftStickBtn?.classList.toggle('pressed', stick === 'left');
+      rightStickBtn?.classList.toggle('pressed', stick === 'right');
+      selectedStickPill.textContent = stick === 'left' ? 'Left stick' : 'Right stick';
+      if(!circularityState.running){
+        testInstruction.textContent = `Press Start, then move the ${circularityStick} stick in a full circle as evenly as you can. Your live path will draw on the chart beside a perfect reference circle.`;
+      }
+    }
+
+    function resetCircularity(){
+      circularityState.running = false;
+      circularityState.finished = false;
+      circularityState.points = [];
+      circularityState.coverageBins = new Set();
+      circularityState.lapCount = 0;
+      circularityState.lastSampleAt = 0;
+      circularityState.lastPoint = null;
+      circularityState.lastAngle = null;
+      circularityState.angleTurns = 0;
+      circularityState.startedAt = 0;
+      circularityState.completedAt = 0;
+      circularityState.finalScore = null;
+      circularityState.finalSummary = '';
+      testStatePill.textContent = 'Ready';
+      circularityScore.textContent = '--';
+      circularitySummary.textContent = 'Waiting to begin.';
+      circularityStatusText.textContent = 'Ready';
+      circularitySampleText.textContent = '0';
+      testInstruction.textContent = 'Press Start, then move the chosen stick in a full circle as evenly as you can. The test will stop automatically once it has a clean enough trace.';
+      circularityStartBtn.textContent = 'Start';
+      circularityStartBtn.classList.remove('pressed');
+      setCircularityStick(circularityStick);
+      renderCircularityTest();
+    }
+
+    function startCircularity(){
+      circularityState.running = true;
+      circularityState.finished = false;
+      circularityState.points = [];
+      circularityState.coverageBins = new Set();
+      circularityState.lapCount = 0;
+      circularityState.lastSampleAt = 0;
+      circularityState.lastPoint = null;
+      circularityState.lastAngle = null;
+      circularityState.angleTurns = 0;
+      circularityState.startedAt = performance.now();
+      circularityState.completedAt = 0;
+      circularityState.finalScore = null;
+      circularityState.finalSummary = '';
+      testStatePill.textContent = 'Recording';
+      circularityScore.textContent = '--';
+      circularitySummary.textContent = 'Spin the chosen stick in a circle now.';
+      circularityStatusText.textContent = 'Recording';
+      circularitySampleText.textContent = '0';
+      testInstruction.textContent = `Spin the ${circularityStick} stick in a clean circle. The trace updates live and will stop automatically once it has a good dataset.`;
+      circularityStartBtn.textContent = 'Running';
+      circularityStartBtn.classList.add('pressed');
+    }
+
+    function getCircularityStickAxes(gp){
+      if(!gp) return { x: 0, y: 0, active: false };
+      const axes = gp.axes || [];
+      const isLeft = circularityStick === 'left';
+      const x = axes[isLeft ? 0 : 2] ?? 0;
+      const y = axes[isLeft ? 1 : 3] ?? 0;
+      const magnitude = Math.hypot(x, y);
+      return { x, y, active: magnitude > 0.12, magnitude };
+    }
+
+    function computeCircularityScore(points){
+      if(points.length < 4) return null;
+      const target = 1;
+      const avgError = points.reduce((sum, p)=> sum + Math.abs(Math.hypot(p.x, p.y) - target), 0) / points.length;
+      const score = Math.round(clamp(100 - avgError * 140, 0, 100));
+      return { score, avgError };
+    }
+
+    function sampleCircularityPoint(rawX, rawY){
+      const point = { x: clamp(rawX, -1, 1), y: clamp(rawY, -1, 1) };
+      const magnitude = Math.hypot(point.x, point.y);
+      const angle = Math.atan2(point.y, point.x);
+      const binCount = 24;
+      const bin = Math.floor((((angle + Math.PI) / (Math.PI * 2)) * binCount) % binCount);
+      return { point, magnitude, bin, angle };
+    }
+
+    function getSmoothedCircularityPoints(points){
+      if(points.length <= 2) return points.slice();
+      const radius = CIRCULARITY_SMOOTH_WINDOW;
+      const weights = [1, 2, 3, 4, 3, 2, 1];
+      const smoothed = [];
+      for(let i=0; i<points.length; i++){
+        let sumX = 0;
+        let sumY = 0;
+        let total = 0;
+        for(let offset = -radius; offset <= radius; offset++){
+          const idx = clampIndex(i + offset, 0, points.length - 1);
+          const weight = weights[offset + radius];
+          sumX += points[idx].x * weight;
+          sumY += points[idx].y * weight;
+          total += weight;
+        }
+        smoothed.push({ x: sumX / total, y: sumY / total });
+      }
+      return smoothed;
+    }
+
+    function updateCircularityLapCount(angle){
+      if(circularityState.lastAngle == null){
+        circularityState.lastAngle = angle;
+        circularityState.angleTurns = 0;
+        circularityState.lapCount = 0;
+        return 0;
+      }
+      let delta = angle - circularityState.lastAngle;
+      while(delta > Math.PI) delta -= Math.PI * 2;
+      while(delta < -Math.PI) delta += Math.PI * 2;
+      circularityState.angleTurns += delta;
+      circularityState.lastAngle = angle;
+      circularityState.lapCount = Math.floor(Math.abs(circularityState.angleTurns) / (Math.PI * 2));
+      return circularityState.lapCount;
+    }
+
+    function finishCircularity(reason){
+      const scoreData = computeCircularityScore(circularityState.points);
+      circularityState.running = false;
+      circularityState.finished = true;
+      circularityState.completedAt = performance.now();
+      circularityState.finalScore = scoreData?.score ?? null;
+      circularityState.finalSummary = scoreData
+        ? `Final average deviation: ${(scoreData.avgError * 100).toFixed(1)}% of radius.`
+        : 'Not enough samples to score this trace.';
+      circularityScore.textContent = scoreData ? `${scoreData.score}` : '--';
+      circularitySummary.textContent = circularityState.finalSummary;
+      circularityStatusText.textContent = reason || 'Complete';
+      circularitySampleText.textContent = String(circularityState.points.length);
+      testStatePill.textContent = reason || 'Complete';
+      circularityStartBtn.textContent = 'Start again';
+      circularityStartBtn.classList.remove('pressed');
+      testInstruction.textContent = 'Result locked. Start again to run another trace.';
+      drawCircularityPath(circularityState.points, false, scoreData);
+    }
+
+    function resizeCircularityCanvas(){
+      if(!circularityCanvas || !circularityCtx) return;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = circularityCanvas.getBoundingClientRect();
+      const width = Math.max(320, Math.round(rect.width));
+      const height = Math.max(260, Math.round(rect.height));
+      if(circularityCanvas.width !== Math.round(width * dpr) || circularityCanvas.height !== Math.round(height * dpr)){
+        circularityCanvas.width = Math.round(width * dpr);
+        circularityCanvas.height = Math.round(height * dpr);
+        circularityCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+    }
+
+    function drawCircularityPath(points, isRunning, scoreData){
+      if(!circularityCanvas || !circularityCtx) return;
+      resizeCircularityCanvas();
+      const ctx = circularityCtx;
+      const w = circularityCanvas.clientWidth || 1;
+      const h = circularityCanvas.clientHeight || 1;
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = Math.min(w, h) * 0.45;
+
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(125,211,252,0.42)';
+      ctx.shadowColor = 'rgba(125,211,252,0.18)';
+      ctx.shadowBlur = 10;
+      ctx.lineWidth = 1.7;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(cx - radius - 20, cy);
+      ctx.lineTo(cx + radius + 20, cy);
+      ctx.moveTo(cx, cy - radius - 20);
+      ctx.lineTo(cx, cy + radius + 20);
+      ctx.stroke();
+
+      if(points.length){
+        ctx.save();
+        ctx.strokeStyle = 'rgba(125,211,252,0.52)';
+        ctx.lineWidth = 1.15;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        points.forEach((p, index)=>{
+          const px = cx + p.x * radius;
+          const py = cy + p.y * radius;
+          if(index === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,0.92)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function renderCircularityTest(){
+      const test = TESTS.find(t => t.id === activeTestId);
+      if(!test || activeTestId !== 'thumbstick-circularity'){
+        return;
+      }
+      const scoreData = computeCircularityScore(circularityState.points);
+      const renderPoints = getSmoothedCircularityPoints(circularityState.points);
+      if(scoreData){
+        if(circularityState.running){
+          circularityScore.textContent = `${scoreData.score}`;
+          circularitySummary.textContent = `Average deviation from the ideal ring: ${(scoreData.avgError * 100).toFixed(1)}% of radius.`;
+          testStatePill.textContent = `${circularityState.lapCount}/8 laps`;
+          circularityStatusText.textContent = 'Recording';
+          circularitySampleText.textContent = String(circularityState.points.length);
+        } else if(circularityState.finished){
+          circularityScore.textContent = `${scoreData.score}`;
+          circularitySummary.textContent = circularityState.finalSummary || `Final average deviation: ${(scoreData.avgError * 100).toFixed(1)}% of radius.`;
+          circularityStatusText.textContent = circularityState.finalScore != null ? 'Done' : 'Ready';
+          circularitySampleText.textContent = String(circularityState.points.length);
+        }
+      } else {
+        circularityStatusText.textContent = circularityState.running ? 'Recording' : (circularityState.finished ? 'Done' : 'Ready');
+        circularitySampleText.textContent = String(circularityState.points.length);
+      }
+      drawCircularityPath(renderPoints, circularityState.running, scoreData);
+    }
 
     // Keep a snapshot of connected gamepads to avoid unnecessary rebuilds
     let _lastGamepadSnapshot = '';
@@ -381,6 +832,51 @@
         if(rightKnob) rightKnob.classList.toggle('stick-pressed', rsPressed);
         // raw info removed
       }
+
+      if(activeTab === 'tests'){
+        const targetStick = getCircularityStickAxes(gp);
+        const rawAxes = gp?.axes || [];
+        const rawX = circularityStick === 'left' ? (rawAxes[0] ?? 0) : (rawAxes[2] ?? 0);
+        const rawY = circularityStick === 'left' ? (rawAxes[1] ?? 0) : (rawAxes[3] ?? 0);
+        const stickActive = targetStick.active;
+        if(circularityState.running && gp){
+          const now = performance.now();
+          const shouldSample = now - circularityState.lastSampleAt > CIRCULARITY_SAMPLE_MS;
+          const sampled = sampleCircularityPoint(rawX, rawY);
+          if(shouldSample && stickActive && sampled.magnitude > 0.42){
+            if(!circularityState.lastPoint || dist(sampled.point, circularityState.lastPoint) > 0.006){
+              circularityState.points.push(sampled.point);
+              circularityState.coverageBins.add(sampled.bin);
+              updateCircularityLapCount(sampled.angle);
+              circularityState.lastPoint = sampled.point;
+              circularityState.lastSampleAt = now;
+            }
+          }
+          const scoreData = computeCircularityScore(circularityState.points);
+          if(scoreData){
+            circularityScore.textContent = `${scoreData.score}`;
+            circularitySummary.textContent = `Average deviation from the ideal ring: ${(scoreData.avgError * 100).toFixed(1)}% of radius.`;
+            if(scoreData.score >= 85) testStatePill.textContent = 'Very round';
+            else if(scoreData.score >= 70) testStatePill.textContent = 'Close';
+            else testStatePill.textContent = 'Needs work';
+          }
+          testInstruction.textContent = stickActive
+            ? `Keep the ${circularityStick} stick moving smoothly around the ring.`
+            : `Move the ${circularityStick} stick away from center and trace a full circle.`;
+
+          const elapsed = now - circularityState.startedAt;
+          const coveredBins = circularityState.coverageBins.size;
+          const coverageReady = coveredBins >= 22;
+          const enoughPoints = circularityState.points.length >= 110;
+          const scoreReady = (scoreData?.score ?? 0) >= 72;
+          const minDurationReady = elapsed >= 2000;
+          const lapReady = circularityState.lapCount >= 8;
+          if(lapReady && coverageReady && enoughPoints && scoreReady && minDurationReady){
+            finishCircularity('Complete');
+          }
+        }
+        renderCircularityTest();
+      }
       requestAnimationFrame(update);
     }
 
@@ -398,6 +894,23 @@
     
 
     // Events
+    tabButtons.forEach(btn=>{
+      btn.addEventListener('click', ()=> setActiveTab(btn.dataset.tab));
+    });
+
+    TESTS.forEach(test => {
+      if(activeTestId === test.id) setActiveTest(test.id);
+    });
+    renderTestList();
+    setCircularityStick('left');
+    resetCircularity();
+
+    leftStickBtn?.addEventListener('click', ()=> setCircularityStick('left'));
+    rightStickBtn?.addEventListener('click', ()=> setCircularityStick('right'));
+    circularityStartBtn?.addEventListener('click', ()=> startCircularity());
+    circularityResetBtn?.addEventListener('click', ()=> resetCircularity());
+    window.addEventListener('resize', ()=> renderCircularityTest());
+
     window.addEventListener('gamepadconnected', (e)=>{
       footer.textContent = `Gamepad connected: ${e.gamepad.id}`;
       updateGamepadList();
@@ -454,6 +967,7 @@
 
     // initial population
     updateGamepadList();
+    setActiveTab('visualizer');
     requestAnimationFrame(update);
 
     // Fallback poll in case requestAnimationFrame doesn't detect changes quickly in some environments
